@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AxiosInstance } from './utils/axiosInstance'
 
 const personas = {
   hitesh: {
@@ -99,16 +100,64 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
   const textareaRef = useRef(null)
+  const messagesEndRef = useRef(null)
   const currentPersona = personas[selected]
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages, isLoading])
 
   const resizeTextarea = (target) => {
     target.style.height = '0'
     target.style.height = `${Math.min(target.scrollHeight, 160)}px`
   }
 
-  const sendMessage = () => {
-   
+  const sendMessage = async () => {
+    const question = message.trim()
+    if (!question || isLoading || selected !== 'hitesh') return
+
+    setMessages((items) => [
+      ...items,
+      { id: crypto.randomUUID(), role: 'user', content: question },
+    ])
+    setMessage('')
+    setIsLoading(true)
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+
+    try {
+      const response = await AxiosInstance.post('/chat/hitesh', { question })
+      const responseData = response?.data?.data
+      const reply =
+        typeof responseData === 'string'
+          ? responseData
+          : responseData?.answer || responseData?.message || 'No response received.'
+
+      setMessages((items) => [
+        ...items,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: reply,
+          persona: 'hitesh',
+        },
+      ])
+    } catch (error) {
+      console.error('Hitesh chat request failed:', error)
+      setMessages((items) => [
+        ...items,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: 'I could not respond right now. Please try again.',
+          persona: 'hitesh',
+          isError: true,
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleKeyDown = (event) => {
@@ -119,7 +168,7 @@ function App() {
   }
 
   return (
-    <main className="relative isolate grid min-h-svh grid-rows-[auto_1fr_auto] overflow-hidden bg-[#0b0c0f] text-[#e9e9ed]">
+    <main className="relative isolate grid h-svh grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-[#0b0c0f] text-[#e9e9ed]">
       <div className="pointer-events-none fixed -top-72 left-[12%] -z-10 size-[34rem] rounded-full bg-[#9b7bff] opacity-[0.09] blur-[130px]" />
       <div className="pointer-events-none fixed -right-68 -bottom-68 -z-10 size-[34rem] rounded-full bg-[#28d8d8] opacity-[0.09] blur-[130px]" />
 
@@ -266,11 +315,36 @@ function App() {
                         {persona.name}
                       </span>
                     )}
-                    <p className="m-0 text-sm leading-[1.65] text-[#d9dae0]">{item.content}</p>
+                    <p className={`m-0 text-sm leading-[1.65] ${item.isError ? 'text-[#d99595]' : 'text-[#d9dae0]'}`}>
+                      {item.content}
+                    </p>
                   </div>
                 </article>
               )
             })}
+            {isLoading && (
+              <article className="mb-7 flex animate-[welcome-in_250ms_ease_both] items-start gap-3">
+                <Avatar persona={personas.hitesh} size="small" />
+                <div className="min-w-0">
+                  <span className="mb-[7px] block text-[11px] font-semibold text-[#92949d]">
+                    Hitesh Choudhary
+                  </span>
+                  <div
+                    className="flex w-fit items-center gap-1.5 rounded-[4px_16px_16px_16px] border border-[#292a31] bg-[#18191e] px-3.5 py-3"
+                    aria-label="Hitesh is typing"
+                  >
+                    {[0, 1, 2].map((dot) => (
+                      <span
+                        className="size-1.5 animate-bounce rounded-full bg-[#9f8bea]"
+                        style={{ animationDelay: `${dot * 130}ms` }}
+                        key={dot}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </article>
+            )}
+            <div ref={messagesEndRef} />
           </div>
         )}
       </section>
@@ -300,11 +374,15 @@ function App() {
           <button
             className="grid size-[42px] shrink-0 place-items-center rounded-[13px] border-0 bg-linear-to-br from-[#b9a6ff] to-[#8c79d9] text-[#131118] shadow-[0_5px_18px_rgba(154,133,225,0.22)] transition hover:not-disabled:-translate-y-px disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#2c2d34] disabled:text-[#656771] disabled:shadow-none"
             type="button"
-            aria-label="Send message"
-            disabled={!message.trim()}
+            aria-label={isLoading ? 'Waiting for response' : 'Send message'}
+            disabled={!message.trim() || isLoading || selected !== 'hitesh'}
             onClick={sendMessage}
           >
-            <Icon name="arrow" size={19} />
+            {isLoading ? (
+              <span className="size-[18px] animate-spin rounded-full border-2 border-[#656771] border-t-[#b9a6ff]" />
+            ) : (
+              <Icon name="arrow" size={19} />
+            )}
           </button>
         </div>
         <p className="mt-[9px] text-center text-[9px] tracking-[0.02em] text-[#555761] max-[700px]:hidden">
