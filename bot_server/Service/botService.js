@@ -63,12 +63,23 @@ const hitesh_system_prompt = `
 
 
 `;
+
+const Piyush_system_prompt = `Reply user by roast Rule:
+    
+     - output will be strictly in JSON format`;
 const message_db = [
   {
     role: "system",
     content: hitesh_system_prompt,
   },
 ];
+
+const message_db1 = [
+  {
+    role:"system",
+    content:Piyush_system_prompt
+  }
+]
 export async function HiteshBotService(question) {
   try {
     message_db.push({
@@ -96,17 +107,56 @@ export async function HiteshBotService(question) {
         content: rawresult,
       });
 
-      console.log(`${parsedResult.Step}:- ${parsedResult.Text}`)
+      console.log(`${parsedResult.Step}:- ${parsedResult.Text}`);
 
-      if(parsedResult.Step === "Output"){
-        outputResult = parsedResult.Text
+      if (parsedResult.Step === "Output") {
+        outputResult = parsedResult.Text;
         break;
       }
     }
 
     return outputResult;
+  } catch (error) {
+    throw error;
+  }
+}
 
+export async function PiyushBotService(question) {
+  try {
+    message_db1.push({
+      role: "user",
+      content: question,
+    });
+    console.log("Thinking started....");
 
+    let outputResult = "";
+
+    while (true) {
+      const interaction = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: message_db1,
+        response_format: {
+          type: "json_object",
+        },
+      });
+
+      const rawresult = interaction.choices[0].message.content;
+      const parsedResult = JSON.parse(rawresult);
+
+      message_db1.push({
+        role: "assistant",
+        content: rawresult,
+      });
+
+      console.log(`${parsedResult.Step}:- ${parsedResult.Text}`);
+
+      if (parsedResult.Step === "Output") {
+        outputResult = parsedResult.Text;
+        break;
+      }
+    }
+
+    return outputResult;
   } catch (error) {
     throw error;
   }
