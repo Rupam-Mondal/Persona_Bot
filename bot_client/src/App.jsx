@@ -18,20 +18,11 @@ const personas = {
     description: 'Explore engineering with a practical point of view.',
     greeting: "Hey! Piyush here. Let's break down your idea together.",
   },
-  both: {
-    name: 'Hitesh & Piyush',
-    shortName: 'Both',
-    initials: 'H+',
-    color: 'mixed',
-    description: 'Get two perspectives in one thoughtful conversation.',
-    greeting: "We're both here. Bring us a question or an idea to explore.",
-  },
 }
 
 const avatarColors = {
   violet: 'bg-linear-to-br from-[#8064dd] to-[#3c2e79]',
   cyan: 'bg-linear-to-br from-[#35adbb] to-[#195265]',
-  mixed: 'bg-linear-to-br from-[#8a6ded] to-[#247c89]',
 }
 
 const avatarSizes = {
@@ -116,7 +107,8 @@ function App() {
 
   const sendMessage = async () => {
     const question = message.trim()
-    if (!question || isLoading || selected !== 'hitesh') return
+    if (!question || isLoading) return
+    const persona = selected
 
     setMessages((items) => [
       ...items,
@@ -127,7 +119,7 @@ function App() {
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
     try {
-      const response = await AxiosInstance.post('/chat/hitesh', { question })
+      const response = await AxiosInstance.post(`/chat/${persona}`, { question })
       const responseData = response?.data?.data
       const reply =
         typeof responseData === 'string'
@@ -140,18 +132,18 @@ function App() {
           id: crypto.randomUUID(),
           role: 'assistant',
           content: reply,
-          persona: 'hitesh',
+          persona,
         },
       ])
     } catch (error) {
-      console.error('Hitesh chat request failed:', error)
+      console.error(`${personas[persona].shortName} chat request failed:`, error)
       setMessages((items) => [
         ...items,
         {
           id: crypto.randomUUID(),
           role: 'assistant',
           content: 'I could not respond right now. Please try again.',
-          persona: 'hitesh',
+          persona,
           isError: true,
         },
       ])
@@ -240,7 +232,7 @@ function App() {
                     <span className="flex flex-col">
                       <strong className="text-[13px] font-medium">{persona.name}</strong>
                       <small className="text-[11px] text-[#666873]">
-                        {key === 'both' ? 'Talk to both' : `Talk to ${persona.shortName}`}
+                        Talk to {persona.shortName}
                       </small>
                     </span>
                     <i
@@ -258,14 +250,7 @@ function App() {
         {messages.length === 0 ? (
           <div className="m-auto w-full max-w-[680px] animate-[welcome-in_500ms_ease_both] pb-[22px] text-center max-[700px]:pb-2">
             <div className="relative mb-[22px] flex h-[74px] items-center justify-center max-[700px]:mb-[18px]">
-              {selected === 'both' ? (
-                <>
-                  <Avatar persona={personas.hitesh} size="large" className="border-[3px] border-[#0b0c0f]" />
-                  <Avatar persona={personas.piyush} size="large" className="-ml-3.5 border-[3px] border-[#0b0c0f]" />
-                </>
-              ) : (
-                <Avatar persona={currentPersona} size="large" className="border-[3px] border-[#0b0c0f]" />
-              )}
+              <Avatar persona={currentPersona} size="large" className="border-[3px] border-[#0b0c0f]" />
               <span className="absolute bottom-[-2px] left-[calc(50%+35px)] grid size-7 place-items-center rounded-full border-[3px] border-[#0b0c0f] bg-[#c9baff] text-[#17131f]">
                 <Icon name="sparkle" size={17} />
               </span>
@@ -324,14 +309,14 @@ function App() {
             })}
             {isLoading && (
               <article className="mb-7 flex animate-[welcome-in_250ms_ease_both] items-start gap-3">
-                <Avatar persona={personas.hitesh} size="small" />
+                <Avatar persona={currentPersona} size="small" />
                 <div className="min-w-0">
                   <span className="mb-[7px] block text-[11px] font-semibold text-[#92949d]">
-                    Hitesh Choudhary
+                    {currentPersona.name}
                   </span>
                   <div
                     className="flex w-fit items-center gap-1.5 rounded-[4px_16px_16px_16px] border border-[#292a31] bg-[#18191e] px-3.5 py-3"
-                    aria-label="Hitesh is typing"
+                    aria-label={`${currentPersona.shortName} is typing`}
                   >
                     {[0, 1, 2].map((dot) => (
                       <span
@@ -375,7 +360,7 @@ function App() {
             className="grid size-[42px] shrink-0 place-items-center rounded-[13px] border-0 bg-linear-to-br from-[#b9a6ff] to-[#8c79d9] text-[#131118] shadow-[0_5px_18px_rgba(154,133,225,0.22)] transition hover:not-disabled:-translate-y-px disabled:cursor-not-allowed disabled:bg-none disabled:bg-[#2c2d34] disabled:text-[#656771] disabled:shadow-none"
             type="button"
             aria-label={isLoading ? 'Waiting for response' : 'Send message'}
-            disabled={!message.trim() || isLoading || selected !== 'hitesh'}
+            disabled={!message.trim() || isLoading}
             onClick={sendMessage}
           >
             {isLoading ? (
